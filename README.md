@@ -32,7 +32,7 @@ If a node fails to send a heartbeat within a predefined timeout window, it is ma
 - Initiating automated recovery or restart scripts
 - Temporarily routing requests to redundant or cached services
 
-This "push-based" heartbeat strategy minimizes network overhead and scales more efficiently across dozens of store locations, since the central monitor doesn't need to maintain a learge number of outgoing requests.
+This "push-based" heartbeat strategy minimizes network overhead and scales more efficiently across dozens of store locations, since the central monitor doesn't need to maintain a large number of outgoing requests.
 
 ## Workflow
 
