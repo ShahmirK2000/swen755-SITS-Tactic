@@ -103,29 +103,29 @@ javac *.java
 
 ### Running
 
-Start the **CarController**.
+Start the **CentralController**.
 
 ```bash
-java CarController
+java CentralController
 ```
 
 ### Output
 
 ```bash
-CarController started, waiting for connections...
+CentralController started, waiting for connections...
 ```
 
-In a second terminal, start the **CollisionDetector**.
+In a second terminal, start the **OrderService**.
 
 ```bash
-java CollisionDetector
+java OrderService
 ```
 
 Now observe:
 
-- Collision Detector prints object detection and health status.
-- Car Controller logs heartbeats.
-- If heartbeats stop for 5+ seconds (due to random failure), Car Controller logs:
+- The OrderService will create and process orders using the `order.sh` script
+- The OrderService will send periodic heartbeats to the CentralController
+- When a heartbeat is not received for over 5 seconds, the CentralController will react
 
 ```bash
 No heartbeat received for 5 seconds, taking action!
