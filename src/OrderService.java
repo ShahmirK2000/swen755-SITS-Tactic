@@ -1,10 +1,9 @@
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.nio.file.Files;
+import java.util.List;
 
 public class OrderService implements Runnable {
     private volatile HealthStatus healthStatus = HealthStatus.HEALTHY;
@@ -12,17 +11,19 @@ public class OrderService implements Runnable {
     private Socket socket;
     private PrintWriter outWriter;
     private final int durationMillis;
-    private final String fifoPath;
-    private Thread fifoReaderThread;
+    private final String orderFilePath;
+    private Thread orderFileReaderThread;
 
     /**
      * Constructor
      * @param storeNode the reference to the store that's ordering
+     * @param durationMillis the time between pulses
+     * @param orderFilePath the location of the temp file used to pipe orders
      */
-    public OrderService(StoreNode storeNode, int durationMillis, String fifoPath) {
+    public OrderService(StoreNode storeNode, int durationMillis, String orderFilePath) {
         this.storeNode = storeNode;
         this.durationMillis = durationMillis;
-        this.fifoPath = fifoPath;
+        this.orderFilePath = orderFilePath;
     }
 
     /**
@@ -41,8 +42,8 @@ public class OrderService implements Runnable {
     public void run() {
         System.out.println("Order service is running...");
 
-        if (fifoPath != null && !fifoPath.isEmpty()) {
-            startFifoReader(fifoPath);
+        if (orderFilePath != null && !orderFilePath.isEmpty()) {
+            startOrderFileReader(orderFilePath);
         }
 
         try {
@@ -51,57 +52,45 @@ public class OrderService implements Runnable {
                 Thread.sleep(durationMillis);
             }
         } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                System.out.println(storeNode.getId() + " interrupted.");
-            } finally {
-                cleanup();
-                System.out.println("Order service has shut down.");
-            }
+            Thread.currentThread().interrupt();
+            System.out.println(storeNode.getId() + " interrupted.");
+        } finally {
+            cleanup();
+            System.out.println("Order service has shut down.");
+        }
     }
 
-    private void startFifoReader(String path) {
-        fifoReaderThread = new Thread(() -> {
-            File fifoFile = new File(path);
-            try {
-                if (!fifoFile.exists()) {
-                    fifoFile.getParentFile().mkdirs();
-
-                    // Should make this work on linux, mac, and windows
-                    if(!System.getProperty("os.name").toLowerCase().contains("win")) {
-                        Process process = new ProcessBuilder("mkfifo", path).inheritIO().start();
-                        int rc = process.waitFor();
-                        if (rc != 0 ) {
-                            System.err.println("mkfifo returned " + rc);
-                        }
-                    } else {
-                        fifoFile.createNewFile();
+    private void startOrderFileReader(String path) {
+        orderFileReaderThread = new Thread(() -> {
+            File file = new File(path);
+            while (healthStatus.isHealthy()) {
+                try {
+                    if (!file.exists()) {
+                        file.getParentFile().mkdirs();
+                        file.createNewFile();
                     }
-                }
-            } catch (Exception e) {
-                System.err.println("FIFO either doesn't exist or cannot be created: " + e.getMessage());
-            }
 
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(fifoFile)))) {
-                String line;
-                System.out.println(storeNode.getId() + " listening for orders placed at " + path);
-                while (healthStatus.isHealthy()) {
-                    while ((line = reader.readLine()) != null) {
-                        line = line.trim();
-                        if (!line.isEmpty()) {
-                            handleOrder(line);
+                    List<String> lines = Files.readAllLines(file.toPath());
+                    if (!lines.isEmpty()) {
+                        for (String line : lines) {
+                            line = line.trim();
+                            if (!line.isEmpty()) {
+                                handleOrder(line);
+                            }
                         }
+                        // Clear the file after processing
+                        new PrintWriter(file).close();
                     }
-                    Thread.sleep(500); // ran into issues with blocking on windows, so this helps with retries
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
-            } catch (InterruptedException ex) {
-                ex.printStackTrace();
-            }
-        }, storeNode.getId() + "-fifo-reader");
 
-        fifoReaderThread.setDaemon(true);
-        fifoReaderThread.start();
+                    Thread.sleep(500); // Controls how often file polling is done. Kind of a dumb implementation but makes cross platform issues easier to handle
+                } catch (IOException | InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        }, storeNode.getId() + "-file-reader");
+
+        orderFileReaderThread.setDaemon(true);
+        orderFileReaderThread.start();
     }
 
     private void handleOrder(String line) {
@@ -137,13 +126,13 @@ public class OrderService implements Runnable {
     private void sendPulse() {
         if (outWriter != null) {
             outWriter.println("PULSE:" + storeNode.getId());
-            System.out.println(storeNode.getId() + " : PULSE");
             outWriter.flush();
+            System.out.println(storeNode.getId() + " : PULSE");
         }
     }
 
     public void shutdown() {
-        if (fifoReaderThread != null) fifoReaderThread.interrupt();
+        if (orderFileReaderThread != null) orderFileReaderThread.interrupt();
     }
 
     /** Cleanup resources */
