@@ -15,6 +15,7 @@ public class CentralController extends Thread {
 
     @Override
     public void run() {
+        new Thread(this::monitorHeartbeats).start();
         try(ServerSocket serverSocket = new ServerSocket(port)) {
             System.out.println("Central controller started on port " + port);
 
@@ -34,27 +35,37 @@ public class CentralController extends Thread {
 
             while (scanner.hasNextLine()) {
                 String message = scanner.nextLine();
-
                 if(message.startsWith("PULSE:")) {
                     String heartbeatId = message.split(":")[1];
-                    heartbeats.put(heartbeatId, System.currentTimeMillis());
+                    synchronized (heartbeats) {
+                        heartbeats.put(heartbeatId, System.currentTimeMillis());
+                    }
                     System.out.println("Pulse received from " + heartbeatId);
-                }
-                checkTimeouts();
+                } // For full implementation, we may want to send more than just pulse messages to the controller, so I added a check for that but no additional logic to keep the demo small.
             }
         } catch (IOException e) {
             System.out.println("Service disconnected: " + e.getMessage());
         }
     }
 
-    private void checkTimeouts() {
-        long currentTime = System.currentTimeMillis();
-        for (Map.Entry<String, Long> entry : heartbeats.entrySet()) {
-            String heartbeatId = entry.getKey();
-            long lastPulse = entry.getValue();
-            if ((currentTime - lastPulse) > 5000) {
-                System.out.println("[ALERT] Service " + heartbeatId + " has died, last seen " + (currentTime - lastPulse) + " ms ago.");
-                // We can insert some sort of restarts or something else here like we talked about in our meeting if we want
+    private void monitorHeartbeats() {
+        while (true) {
+            long currentTime = System.currentTimeMillis();
+            synchronized (heartbeats) {
+                for (Map.Entry<String, Long> entry : heartbeats.entrySet()) {
+                    String heartbeatId = entry.getKey();
+                    long lastPulse = entry.getValue();
+                    long elapsed = (currentTime - lastPulse) / 1000;
+                    if (elapsed > 5) {
+                        System.out.println("[ALERT] Service " + heartbeatId + " has died, last seen " + elapsed + "s ago.");
+                        // We can insert some sort of restarts or something else here like we talked about in our meeting if we want
+                    }
+                }
+            }
+            try {
+                Thread.sleep(1000);
+            } catch (Exception e) {
+                Thread.currentThread().interrupt();
             }
         }
     }
