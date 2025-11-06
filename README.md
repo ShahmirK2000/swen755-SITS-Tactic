@@ -63,25 +63,28 @@ With this system, we can ensure quick responsiveness in alerting those monitorin
 
 ## Components
 
-### 1. `Camera.java`
+### 1. `StoreNode.java`
 
-- Represents a simple camera module.
-- Provides a `isObjectDetected()` method that simulates object/obstacle detection.
+- Represents a simple store.
+- Stores a unique ID that can be retrieved at anytime.
 
-### 2. `CollisionDetector.java`
+### 2. `OrderService.java`
 
 - Acts as the **critical process** that needs monitoring.
-- Uses the `Camera` class to simulate object detection events.
-- Sends periodic **heartbeats** to the Car Controller.
-- Includes **random failure** that causes the module to fail to publish a health signal.
-  - The Collision Detector shuts down after failing 3 consecutive health checks.
+- Simulates order requests for new inventory for a store.
+- Sends periodic **heartbeats** to the Central Controller.
+- Creates and manages **orders** of varying quantities of products.
+- Maintains a health status that changes in response to failing systems.
 
-### 3. `CarController.java`
+### 3. `CentralController.java`
 
 - Monitors incoming heartbeat messages over a TCP socket.
 - Maintains the timestamp of the last received heartbeat.
-- If no heartbeat is received within **5 seconds**, it declares the Collision Detector unresponsive and can take further action.
-  - For the purposes of this activity, the Car Controller simply stops running once it no longer has a connected client. *For legal purposes, we do not advise that a car stop running if its submodules appear unresponsive.*
+- If no heartbeat is received within **5 seconds**, it declares the Order Service unresponsive and can take further action.
+
+### 4. `HealthStatus.java`
+- Enum for indicating health status of an Order Service.
+- Contains a status code, name, and descriptive statement on the status of the attached service.
 
 ## Compiling & Running This Project
 
