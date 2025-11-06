@@ -4,17 +4,19 @@
 public class StoreNode {
 
     private final String id;
-    
+
     /**
      * Constructor
-     * @param id the store ID, a string representing the unique identifier of the store
+     * 
+     * @param id the store ID, a string representing the unique identifier of the
+     *           store
      */
     public StoreNode(String id) {
         this.id = id;
     }
 
-   public String getId() {
-    return id;
-   }
+    public String getId() {
+        return id;
+    }
 
 }// end class StoreNode

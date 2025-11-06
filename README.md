@@ -7,7 +7,7 @@
 
 ## Overview
 
-The Heartbeat Tactic is a fault detection mechanism used to ensure that all microservices and distributed store instances within the Supermarket Inventory Tracking System are operational. In this architecture, each store operates as a semi-independent node running its own set of microservices, such as `InventoryService`, `OrderService`, and `NotificationService`, that commincate with the central management system. The heartbeat tactic continuously monitors the availability and health of these nodes to detect and respond to failures in real time.
+The Heartbeat Tactic is a fault detection mechanism used to ensure that all microservices and distributed store instances within the Supermarket Inventory Tracking System are operational. In this architecture, each store operates as a semi-independent node running its own set of microservices, such as `InventoryService`, `OrderService`, and `NotificationService`, that communicate with the central management system. The heartbeat tactic continuously monitors the availability and health of these nodes to detect and respond to failures in real time.
 
 ## Motivation
 
@@ -21,7 +21,7 @@ Implementing a heartbeat mechanism ensures early fault detection, allowing the c
 
 ## Tactic Description
 
-In this system, each distributed store instance and microservice periodically sends a “heartbeat” signal to a central monitoring service known as the Heartbeat Manager. These signals serve as continuous health updates confirming that the node is active and functioning normally.
+In this system, each distributed store instance and microservice periodically sends a “heartbeat” signal to a central monitoring service known as the Heartbeat Manager. These signals serve as continuous health updates confirming that the store node is active and functioning normally. Each node has a unique ID which is used to track the stores.
 
 Instead of the central manager polling every node, each node pushes a lightweight message (often just a timestamp and identifier) at a fixed interval. The Heartbeat Manager maintains a registry of all expected nodes and their last reported timestamps.
 
@@ -51,6 +51,8 @@ For example:
 - If Store #7 loses network connectivity, its heartbeats stop reaching the central system. Within one or two missed intervals, the Heartbeat Manager detects the issue and flags the store as offline
 - Administrators can then investigate or switch analytics/reporting to cached data until the node recovers
 - Once connectivity returns, Store #7 resumes heartbeat transmissions, automatically restoring its “healthy” state
+
+With this system, we can ensure quick responsiveness in alerting those monitoring the system whenever a node is down, in order to reduce downtime.
 
 ## Benefits
 
