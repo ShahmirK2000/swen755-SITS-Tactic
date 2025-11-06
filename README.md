@@ -7,7 +7,7 @@
 
 ## Overview
 
-The Heartbeat Tactic is a fault detection mechanism used to ensure that all microservices and distributed store instances within the Supermarket Inventory Tracking System are operational. In this architecture, each store operates as a semi-independent node running its own set of microservices, such as `InventoryService`, `OrderService`, and `NotificationService`, that commincate with the central management system. The heartbeat tactic continuously monitors the availability and health of these nodes to detect and respond to failures in real time.
+The Heartbeat Tactic is a fault detection mechanism used to ensure that all microservices and distributed store instances within the Supermarket Inventory Tracking System are operational. In this architecture, each store operates as a semi-independent node running its own set of microservices, such as `InventoryService`, `OrderService`, and `NotificationService`, that communicate with the central management system. The heartbeat tactic continuously monitors the availability and health of these nodes to detect and respond to failures in real time.
 
 ## Motivation
 
@@ -21,7 +21,7 @@ Implementing a heartbeat mechanism ensures early fault detection, allowing the c
 
 ## Tactic Description
 
-In this system, each distributed store instance and microservice periodically sends a “heartbeat” signal to a central monitoring service known as the Heartbeat Manager. These signals serve as continuous health updates confirming that the node is active and functioning normally.
+In this system, each distributed store instance and microservice periodically sends a “heartbeat” signal to a central monitoring service known as the Heartbeat Manager. These signals serve as continuous health updates confirming that the store node is active and functioning normally. Each node has a unique ID which is used to track the stores.
 
 Instead of the central manager polling every node, each node pushes a lightweight message (often just a timestamp and identifier) at a fixed interval. The Heartbeat Manager maintains a registry of all expected nodes and their last reported timestamps.
 
@@ -52,6 +52,8 @@ For example:
 - Administrators can then investigate or switch analytics/reporting to cached data until the node recovers
 - Once connectivity returns, Store #7 resumes heartbeat transmissions, automatically restoring its “healthy” state
 
+With this system, we can ensure quick responsiveness in alerting those monitoring the system whenever a node is down, in order to reduce downtime.
+
 ## Benefits
 
 - Continuous Availability: Ensures early detection of faults in remote nodes
@@ -61,25 +63,28 @@ For example:
 
 ## Components
 
-### 1. `Camera.java`
+### 1. `StoreNode.java`
 
-- Represents a simple camera module.
-- Provides a `isObjectDetected()` method that simulates object/obstacle detection.
+- Represents a simple store.
+- Stores a unique ID that can be retrieved at anytime.
 
-### 2. `CollisionDetector.java`
+### 2. `OrderService.java`
 
 - Acts as the **critical process** that needs monitoring.
-- Uses the `Camera` class to simulate object detection events.
-- Sends periodic **heartbeats** to the Car Controller.
-- Includes **random failure** that causes the module to fail to publish a health signal.
-  - The Collision Detector shuts down after failing 3 consecutive health checks.
+- Simulates order requests for new inventory for a store.
+- Sends periodic **heartbeats** to the Central Controller.
+- Creates and manages **orders** of varying quantities of products.
+- Maintains a health status that changes in response to failing systems.
 
-### 3. `CarController.java`
+### 3. `CentralController.java`
 
 - Monitors incoming heartbeat messages over a TCP socket.
 - Maintains the timestamp of the last received heartbeat.
-- If no heartbeat is received within **5 seconds**, it declares the Collision Detector unresponsive and can take further action.
-  - For the purposes of this activity, the Car Controller simply stops running once it no longer has a connected client. *For legal purposes, we do not advise that a car stop running if its submodules appear unresponsive.*
+- If no heartbeat is received within **5 seconds**, it declares the Order Service unresponsive and can take further action.
+
+### 4. `HealthStatus.java`
+- Enum for indicating health status of an Order Service.
+- Contains a status code, name, and descriptive statement on the status of the attached service.
 
 ## Compiling & Running This Project
 
@@ -98,29 +103,29 @@ javac *.java
 
 ### Running
 
-Start the **CarController**.
+Start the **CentralController**.
 
 ```bash
-java CarController
+java CentralController
 ```
 
 ### Output
 
 ```bash
-CarController started, waiting for connections...
+CentralController started, waiting for connections...
 ```
 
-In a second terminal, start the **CollisionDetector**.
+In a second terminal, start the **OrderService**.
 
 ```bash
-java CollisionDetector
+java OrderService
 ```
 
 Now observe:
 
-- Collision Detector prints object detection and health status.
-- Car Controller logs heartbeats.
-- If heartbeats stop for 5+ seconds (due to random failure), Car Controller logs:
+- The OrderService will create and process orders using the `order.sh` script
+- The OrderService will send periodic heartbeats to the CentralController
+- When a heartbeat is not received for over 5 seconds, the CentralController will react
 
 ```bash
 No heartbeat received for 5 seconds, taking action!
